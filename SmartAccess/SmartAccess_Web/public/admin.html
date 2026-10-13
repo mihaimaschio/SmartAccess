@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartAccess — Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h2>Admin Panel</h2>
+          <p class="header-subtitle">User management</p>
+        </div>
+      </div>
+
+      <!-- Users Management -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <h3>Household Members</h3>
+          <button class="btn btn-primary" onclick="openInviteModal()">+ Invite Member</button>
+        </div>
+        <div class="table-container" style="margin-top:16px;">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th style="text-align:center;">Role</th>
+                <th style="text-align:center;">Fingerprint</th>
+                <th style="text-align:center;">Status</th>
+                <th style="text-align:center;">Created</th>
+                <th style="text-align:center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-body">
+              <tr><td colspan="7" style="text-align:center; padding:30px;">
+                <div class="spinner" style="margin:0 auto;"></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PIN Code -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header"><h3>Keypad PIN Code</h3></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:end;">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">New PIN (4–8 digits)</label>
+            <input type="password" id="pin-new" class="form-input" placeholder="••••" maxlength="8" inputmode="numeric" pattern="\d*">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Confirm PIN</label>
+            <input type="password" id="pin-confirm" class="form-input" placeholder="••••" maxlength="8" inputmode="numeric" pattern="\d*">
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn btn-primary" onclick="savePinCode()">Update PIN</button>
+        </div>
+      </div>
+
+      <!-- Pending Invitations -->
+      <div class="card" style="margin-bottom:24px;" id="invitations-card">
+        <div class="card-header"><h3>Pending Invitations</h3></div>
+        <div id="invitations-list" style="margin-top:12px;">
+          <div class="spinner" style="margin:16px auto;"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modal: Invite Member -->
+  <div class="modal-backdrop" id="modal-invite">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>INVITE MEMBER</h3>
+        <button class="modal-close" onclick="closeModal('modal-invite')">✕</button>
+      </div>
+      <div id="invite-form">
+        <div class="form-group">
+          <label class="form-label">Full name</label>
+          <input type="text" id="inv-name" class="form-input" placeholder="e.g. Jane Smith">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="inv-email" class="form-input" placeholder="jane@email.com">
+        </div>
+        <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" onclick="createInvite()">
+          GENERATE LINK
+        </button>
+      </div>
+      <div id="invite-link-section" style="display:none;">
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
+          Send the link below to the invited person. The link is valid for <strong style="color:var(--text-primary);">48 hours</strong>.
+        </p>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="inv-link" class="form-input" readonly style="font-size:11px; flex:1;">
+          <button class="btn btn-primary" onclick="copyInviteLink()" id="btn-copy" style="white-space:nowrap; flex-shrink:0;">Copy</button>
+        </div>
+        <button class="btn btn-ghost" style="width:100%; justify-content:center; margin-top:12px;" onclick="resetInviteModal()">
+          Invite another member
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/enroll-modal.js"></script>
+  <script>
+    if (!requireAuth()) throw 'Not logged in';
+    if (!isAdmin()) { window.location.href = '/dashboard.html'; throw 'Not admin'; }
+    initSidebar('admin');
+
+    // PIN
+    async function savePinCode() {
+      const pin     = document.getElementById('pin-new').value.trim();
+      const confirm = document.getElementById('pin-confirm').value.trim();
+      if (!/^\d{4,8}$/.test(pin)) { showToast('PIN-ul trebuie sa fie intre 4 si 8 cifre.', 'error'); return; }
+      if (pin !== confirm)         { showToast('PIN-urile nu coincid.', 'error'); return; }
+      try {
+        await api.post('/esp/setpin', { pin });
+        document.getElementById('pin-new').value = '';
+        document.getElementById('pin-confirm').value = '';
+        showToast('PIN actualizat pe ESP!', 'success');
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // Utilizatori
+    async function loadUsers() {
+      try {
+        const data = await api.get('/users');
+        const tbody = document.getElementById('users-body');
+        const currentUser = getUser();
+        tbody.innerHTML = data.users.map(u => {
+          const date = new Date(u.created_at).toLocaleDateString('en-GB');
+          const isSelf = currentUser && u.id === currentUser.id;
+          return `<tr>
+            <td style="font-weight:600;">${u.full_name}</td>
+            <td style="color:var(--text-muted);">${u.email}</td>
+            <td style="text-align:center;"><span class="badge ${u.role === 'admin' ? 'badge-warning' : 'badge-info'}">${u.role === 'admin' ? 'Admin' : 'Member'}</span></td>
+            <td style="text-align:center;">${u.fingerprint_slot !== null ? '<span class="badge badge-success">Slot ' + u.fingerprint_slot + '</span>' : '<span class="badge badge-muted">—</span>'}</td>
+            <td style="text-align:center;"><span class="badge ${u.is_active ? 'badge-success' : 'badge-danger'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td style="text-align:center; font-size:12px; color:var(--text-dim);">${date}</td>
+            <td style="text-align:center;">
+              <div class="action-menu">
+                <button class="action-menu-btn" onclick="toggleActionMenu(event, ${u.id})">⋮</button>
+                <div class="action-menu-dropdown" id="menu-${u.id}">
+                  ${u.fingerprint_slot === null
+                    ? `<button class="action-menu-item" onclick="closeActionMenus(); openEnrollModal(${u.id}, '${u.full_name}', loadUsers)">Enroll</button>`
+                    : `<button class="action-menu-item" onclick="closeActionMenus(); adminDeleteFingerprint(${u.id}, '${u.full_name}')">Delete fingerprint</button>`
+                  }
+                  <button class="action-menu-item" onclick="closeActionMenus(); setPresence(${u.id}, ${!u.is_home})">${u.is_home ? 'Mark away' : 'Mark home'}</button>
+                  ${isSelf ? '' : `
+                  <button class="action-menu-item" onclick="closeActionMenus(); toggleUserActive(${u.id}, ${!u.is_active})">${u.is_active ? 'Deactivate' : 'Activate'}</button>
+                  <button class="action-menu-item danger" onclick="closeActionMenus(); deleteUser(${u.id}, '${u.full_name}')">Delete</button>
+                  `}
+                </div>
+              </div>
+            </td>
+          </tr>`;
+        }).join('');
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function toggleActionMenu(e, id) {
+      e.stopPropagation();
+      const menu = document.getElementById('menu-' + id);
+      const wasOpen = menu.classList.contains('open');
+      closeActionMenus();
+      if (!wasOpen) menu.classList.add('open');
+    }
+
+    function closeActionMenus() {
+      document.querySelectorAll('.action-menu-dropdown.open').forEach(el => el.classList.remove('open'));
+    }
+
+    document.addEventListener('click', closeActionMenus);
+
+    async function adminDeleteFingerprint(id, name) {
+      if (!confirm(`Delete only the fingerprint for ${name}? (account will remain active)`)) return;
+      try {
+        await api.delete(`/members/${id}/fingerprint`);
+        showToast(`Fingerprint for ${name} has been deleted.`, 'success');
+        loadUsers();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function setPresence(id, isHome) {
+      try {
+        await api.put(`/members/${id}/presence`, { is_home: isHome });
+        showToast(isHome ? 'Marked as home.' : 'Marked as away.', 'success');
+        loadUsers();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function toggleUserActive(id, newState) {
+      try {
+        await api.put(`/users/${id}`, { is_active: newState });
+        showToast(newState ? 'User activated' : 'User deactivated', 'success');
+        loadUsers();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function deleteUser(id, name) {
+      if (!confirm(`Are you sure you want to delete ${name}'s account?`)) return;
+      try {
+        await api.delete(`/users/${id}`);
+        showToast(`${name}'s account has been deleted.`, 'success');
+        loadUsers();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // Invitatii
+    function openInviteModal() {
+      resetInviteModal();
+      document.getElementById('modal-invite').classList.add('active');
+    }
+
+    function resetInviteModal() {
+      document.getElementById('inv-name').value = '';
+      document.getElementById('inv-email').value = '';
+      document.getElementById('invite-form').style.display = '';
+      document.getElementById('invite-link-section').style.display = 'none';
+    }
+
+    async function createInvite() {
+      const name = document.getElementById('inv-name').value.trim();
+      const email = document.getElementById('inv-email').value.trim();
+      if (!name || !email) { showToast('Please fill in name and email!', 'error'); return; }
+
+      try {
+        const data = await api.post('/invitations', { full_name: name, email });
+        const link = `${window.location.origin}/register.html?token=${data.token}`;
+        document.getElementById('inv-link').value = link;
+        document.getElementById('invite-form').style.display = 'none';
+        document.getElementById('invite-link-section').style.display = '';
+        if (data.email_sent) {
+          showToast(`Invitation email sent to ${email}`, 'success');
+        } else {
+          showToast('Link generated — email not configured, copy and send manually.', 'info');
+        }
+        loadInvitations();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    function copyInviteLink() {
+      const input = document.getElementById('inv-link');
+      navigator.clipboard.writeText(input.value).then(() => {
+        const btn = document.getElementById('btn-copy');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    async function loadInvitations() {
+      try {
+        const data = await api.get('/invitations');
+        const container = document.getElementById('invitations-list');
+        if (data.invitations.length === 0) {
+          container.innerHTML = '<div class="empty-state" style="padding:20px;"><h3>No active invitations</h3></div>';
+          return;
+        }
+        container.innerHTML = data.invitations.map(inv => {
+          const expires = new Date(inv.expires_at).toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+          return `<div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);">
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:600;">${inv.full_name}</div>
+              <div style="font-size:11px; color:var(--text-muted);">${inv.email} · Expires ${expires}</div>
+            </div>
+            <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="copyToken('${inv.id}', '${window.location.origin}/register.html?token=...')">Link</button>
+            <button class="btn btn-danger" style="padding:4px 10px; font-size:11px;" onclick="revokeInvite(${inv.id}, '${inv.full_name}')">Revoke</button>
+          </div>`;
+        }).join('');
+      } catch (e) {}
+    }
+
+    async function revokeInvite(id, name) {
+      if (!confirm(`Revoke invitation for ${name}?`)) return;
+      try {
+        await api.delete(`/invitations/${id}`);
+        showToast('Invitation revoked.', 'success');
+        loadInvitations();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // Init
+    loadUsers();
+    loadInvitations();
+  </script>
+</body>
+</html>

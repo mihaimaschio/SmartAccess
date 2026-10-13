@@ -1,0 +1,20 @@
+{
+  "name": "smart-access-web",
+  "version": "1.0.0",
+  "description": "SmartAccess - Sistem de securitate IoT cu amprentă",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "db:init": "psql -U postgres -f server/schema.sql && psql -U postgres -d smartaccess -f server/seed.sql"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^9.0.1",
+    "pg": "^8.13.0"
+  }
+}

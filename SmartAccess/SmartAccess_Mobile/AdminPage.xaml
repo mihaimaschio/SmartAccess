@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:SmartAccess.Models"
+             x:Class="SmartAccess.AdminPage"
+             BackgroundColor="#121212"
+             Title="Admin">
+
+    <RefreshView x:Name="Refresher" Refreshing="OnRefreshing">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,16,20,28" Spacing="20">
+
+                <VerticalStackLayout Spacing="2" Margin="2,8,0,0">
+                    <Label Text="Admin Panel" TextColor="#DEFF9A" FontSize="22" FontAttributes="Bold"/>
+                    <Label Text="User management" TextColor="#666666" FontSize="12"/>
+                </VerticalStackLayout>
+
+                <!-- Utilizatori -->
+                <Border StrokeShape="RoundRectangle 16" Stroke="#2A2A2A" BackgroundColor="#1A1A1A" Padding="18,16" StrokeThickness="1">
+                    <VerticalStackLayout Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="USERS" TextColor="#DEFF9A" FontSize="12" FontAttributes="Bold" CharacterSpacing="1.5" VerticalOptions="Center"/>
+                            <Button Grid.Column="1" Text="+ Invite" Clicked="OnInvite"
+                                    BackgroundColor="#1E3A10" TextColor="#DEFF9A" FontSize="12" FontAttributes="Bold" CornerRadius="10" HeightRequest="38" Padding="14,0"/>
+                        </Grid>
+
+                        <VerticalStackLayout x:Name="UsersContainer">
+                            <BindableLayout.EmptyView>
+                                <Label Text="No users" TextColor="#555555" FontSize="13" HorizontalOptions="Center" Margin="0,14"/>
+                            </BindableLayout.EmptyView>
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:Member">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="0,10">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                            <Label Text="{Binding FullName}" TextColor="White" FontSize="14" FontAttributes="Bold"/>
+                                            <Label Text="{Binding Email}" TextColor="#777777" FontSize="11"/>
+                                            <HorizontalStackLayout Spacing="6">
+                                                <Border StrokeShape="RoundRectangle 5" Stroke="Transparent" BackgroundColor="#222222" Padding="6,2">
+                                                    <Label Text="{Binding RoleBadge}" TextColor="#AAAAAA" FontSize="9"/>
+                                                </Border>
+                                                <Border StrokeShape="RoundRectangle 5" Stroke="Transparent" BackgroundColor="#222222" Padding="6,2">
+                                                    <Label Text="{Binding StatusBadge}" TextColor="{Binding StatusBadgeColor}" FontSize="9"/>
+                                                </Border>
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" Text="⋮" BackgroundColor="Transparent" TextColor="#888888" FontSize="20"
+                                                WidthRequest="38" HeightRequest="44" Padding="0" VerticalOptions="Center" Clicked="OnUserOptions"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Invitatii -->
+                <Border StrokeShape="RoundRectangle 16" Stroke="#2A2A2A" BackgroundColor="#1A1A1A" Padding="18,16" StrokeThickness="1">
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="PENDING INVITATIONS" TextColor="#DEFF9A" FontSize="12" FontAttributes="Bold" CharacterSpacing="1.5"/>
+                        <VerticalStackLayout x:Name="InvitationsContainer">
+                            <BindableLayout.EmptyView>
+                                <Label Text="No active invitations" TextColor="#555555" FontSize="13" HorizontalOptions="Center" Margin="0,14"/>
+                            </BindableLayout.EmptyView>
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:Invitation">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="0,10">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                            <Label Text="{Binding FullName}" TextColor="White" FontSize="14" FontAttributes="Bold"/>
+                                            <Label Text="{Binding Subtitle}" TextColor="#777777" FontSize="11"/>
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" Text="Revoke" BackgroundColor="#2A1010" TextColor="#FF7777" FontSize="11"
+                                                CornerRadius="8" HeightRequest="36" Padding="12,0" VerticalOptions="Center" Clicked="OnRevokeInvite"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

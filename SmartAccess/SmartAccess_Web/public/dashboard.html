@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartAccess — Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content" style="display:flex; flex-direction:column;">
+      <div class="page-header">
+        <div>
+          <h2>Dashboard</h2>
+          <p class="header-subtitle">SmartAccess control panel</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="position:relative;">
+            <button id="notif-pill" class="status-pill" style="background:var(--warning-bg); color:var(--warning); border:1px solid transparent; cursor:pointer;" onclick="toggleNotifPanel(event)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span id="stat-notif">—</span>
+            </button>
+            <div id="notif-panel" class="notif-panel">
+              <div class="notif-panel-header">
+                <strong>Notifications</strong>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn btn-ghost" style="padding:3px 8px; font-size:10px;" onclick="markAllRead()">Mark all read</button>
+                  <button class="btn btn-danger" style="padding:3px 8px; font-size:10px;" onclick="clearNotifications()">Clear</button>
+                </div>
+              </div>
+              <div id="notif-list"></div>
+            </div>
+          </div>
+          <div id="esp-status" class="status-pill offline">
+            <span class="status-dot offline"></span> CHECKING...
+          </div>
+        </div>
+      </div>
+
+      <!-- Unlock Section -->
+      <div class="card" style="flex:1; display:flex;">
+        <div class="unlock-section" style="flex:1;">
+          <div class="unlock-rings">
+            <div class="unlock-ring"></div>
+            <div class="unlock-ring"></div>
+            <button class="btn-unlock" id="btn-unlock" onclick="unlockDoor()">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+            </button>
+          </div>
+          <span class="unlock-label">UNLOCK</span>
+          <span class="unlock-sublabel">Press to open the door</span>
+
+          <button class="btn btn-ghost" id="btn-presence" style="margin-top:24px; display:none;" onclick="togglePresence()"></button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    if (!requireAuth()) throw 'Not logged in';
+    initSidebar('dashboard');
+
+    const ICON_UNLOCK = `<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`;
+    const ICON_LOADING = `<div class="spinner" style="width:28px;height:28px;border-width:2px;border-color:rgba(10,10,10,0.2);border-top-color:rgba(10,10,10,0.8);"></div>`;
+    const ICON_SUCCESS = `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    const ICON_ERROR = `<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
+    let isUnlocking = false;
+
+    async function checkEspStatus() {
+      const el = document.getElementById('esp-status');
+      try {
+        const data = await api.get('/esp/status');
+        if (data.online) {
+          el.className = 'status-pill online';
+          el.innerHTML = '<span class="status-dot online"></span> SYSTEM ACTIVE';
+        } else {
+          el.className = 'status-pill offline';
+          el.innerHTML = '<span class="status-dot offline"></span> SYSTEM INACTIVE';
+        }
+      } catch {
+        el.className = 'status-pill offline';
+        el.innerHTML = '<span class="status-dot offline"></span> CONNECTION ERROR';
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const notifs = await api.get('/notifications');
+        document.getElementById('stat-notif').textContent = notifs.unread_count;
+        document.getElementById('notif-pill').style.opacity = notifs.unread_count > 0 ? '1' : '0.5';
+        renderNotifList(notifs.notifications);
+      } catch (e) {
+        console.error('Eroare stats:', e);
+      }
+    }
+
+    function renderNotifList(notifications) {
+      const list = document.getElementById('notif-list');
+      if (!notifications || notifications.length === 0) {
+        list.innerHTML = '<div class="empty-state" style="padding:20px;"><h3>No notifications</h3></div>';
+        return;
+      }
+      list.innerHTML = notifications.map(n => `
+        <div class="notification-item ${n.is_read ? '' : 'unread'}">
+          <div style="flex:1;">
+            <div style="font-size:13px; ${n.is_read ? 'color:var(--text-muted);' : ''}">${n.message}</div>
+            <span class="notif-time">${formatDate(n.created_at)}</span>
+          </div>
+          ${!n.is_read ? `<button class="btn btn-ghost" style="padding:2px 8px; font-size:10px;" onclick="markRead(${n.id})">✓</button>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function toggleNotifPanel(e) {
+      e.stopPropagation();
+      const panel = document.getElementById('notif-panel');
+      const wasOpen = panel.classList.contains('open');
+      panel.classList.toggle('open', !wasOpen);
+      if (!wasOpen) loadStats();
+    }
+
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('notif-panel');
+      if (panel.classList.contains('open') && !e.target.closest('#notif-panel') && !e.target.closest('#notif-pill')) {
+        panel.classList.remove('open');
+      }
+    });
+
+    async function markRead(id) {
+      try { await api.put(`/notifications/${id}/read`); loadStats(); } catch (e) {}
+    }
+
+    async function markAllRead() {
+      try {
+        await api.put('/notifications/read-all');
+        showToast('All notifications marked as read.', 'success');
+        loadStats();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function clearNotifications() {
+      if (!confirm('Delete all notifications? This action is irreversible.')) return;
+      try {
+        await api.delete('/notifications');
+        showToast('All notifications have been cleared.', 'success');
+        loadStats();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    // Prezenta: intrarea prin amprenta seteaza "acasa" automat, dar iesirea se
+    // declara manual, deoarece usa nu are senzor de iesire.
+    let myIsHome = true;
+    async function loadPresence() {
+      try {
+        const me = getUser();
+        const data = await api.get('/members');
+        const self = data.members.find(m => m.id === me.id);
+        if (!self) return;
+        myIsHome = self.is_home;
+        renderPresenceBtn();
+        document.getElementById('btn-presence').style.display = '';
+      } catch (e) {
+        console.error('Eroare presence:', e);
+      }
+    }
+
+    function renderPresenceBtn() {
+      const btn = document.getElementById('btn-presence');
+      btn.textContent = myIsHome ? "I'm leaving" : "I'm home";
+    }
+
+    async function togglePresence() {
+      const btn = document.getElementById('btn-presence');
+      btn.disabled = true;
+      try {
+        const me = getUser();
+        const newState = !myIsHome;
+        const data = await api.put(`/members/${me.id}/presence`, { is_home: newState });
+        myIsHome = data.member.is_home;
+        renderPresenceBtn();
+        showToast(myIsHome ? 'Marked as home.' : 'Marked as away.', 'success');
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function unlockDoor() {
+      if (isUnlocking) return;
+      isUnlocking = true;
+      const btn = document.getElementById('btn-unlock');
+      btn.disabled = true;
+      try {
+        btn.style.background = 'var(--warning)';
+        btn.innerHTML = ICON_LOADING;
+        await api.post('/esp/unlock');
+        btn.style.background = 'var(--success)';
+        btn.innerHTML = ICON_SUCCESS;
+        showToast('Door unlocked!', 'success');
+        setTimeout(() => {
+          btn.style.background = 'var(--accent)';
+          btn.innerHTML = ICON_UNLOCK;
+          btn.disabled = false;
+          isUnlocking = false;
+        }, 5000);
+      } catch (err) {
+        btn.style.background = 'var(--danger)';
+        btn.innerHTML = ICON_ERROR;
+        showToast(err.message, 'error');
+        setTimeout(() => {
+          btn.style.background = 'var(--accent)';
+          btn.innerHTML = ICON_UNLOCK;
+          btn.disabled = false;
+          isUnlocking = false;
+        }, 3000);
+      }
+    }
+
+    checkEspStatus();
+    loadStats();
+    loadPresence();
+    setInterval(checkEspStatus, 5000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:SmartAccess.Models"
+             x:Class="SmartAccess.DashboardPage"
+             BackgroundColor="#121212"
+             Title="Home">
+
+    <Grid>
+
+        <RefreshView x:Name="Refresher" Refreshing="OnRefreshing">
+            <ScrollView>
+                <VerticalStackLayout Padding="20,16,20,28" Spacing="20">
+
+                    <!-- HEADER + NOTIF BELL + STATUS -->
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Margin="2,8,0,0">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                            <Label Text="Dashboard" TextColor="#DEFF9A" FontSize="22" FontAttributes="Bold"/>
+                            <Label Text="SmartAccess control panel" TextColor="#666666" FontSize="12"/>
+                        </VerticalStackLayout>
+
+                        <Border Grid.Column="1"
+                                StrokeShape="RoundRectangle 20"
+                                Stroke="Transparent"
+                                BackgroundColor="#3A2E10"
+                                Padding="12,7"
+                                VerticalOptions="Center">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnBellTapped"/>
+                            </Border.GestureRecognizers>
+                            <HorizontalStackLayout Spacing="6">
+                                <Image Source="icon_bell.png" WidthRequest="15" HeightRequest="15" VerticalOptions="Center"/>
+                                <Label x:Name="LblNotifCount" Text="0" TextColor="#FFAA33"
+                                       FontSize="12" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Border>
+
+                        <Border Grid.Column="2"
+                                StrokeShape="RoundRectangle 20"
+                                Stroke="#2A2A2A"
+                                BackgroundColor="#1A1A1A"
+                                Padding="12,7"
+                                VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="7">
+                                <Ellipse x:Name="StatusDot" WidthRequest="8" HeightRequest="8" Fill="#555555" VerticalOptions="Center"/>
+                                <Label x:Name="LblSystemStatus" Text="CHECKING..." TextColor="#888888"
+                                       FontSize="10" FontAttributes="Bold" CharacterSpacing="1" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <!-- UNLOCK -->
+                    <Border StrokeShape="RoundRectangle 20" Stroke="#2A2A2A" BackgroundColor="#1A1A1A" Padding="20,36" StrokeThickness="1">
+                        <VerticalStackLayout Spacing="18" HorizontalOptions="Center">
+
+                            <Grid HorizontalOptions="Center" VerticalOptions="Center">
+                                <!-- Aura circulara. Umbra unui Border se randeaza dreptunghiular pe Android,
+                                     asa ca folosim un gradient radial ca sa nu taie cercurile de mai jos. -->
+                                <Ellipse WidthRequest="200" HeightRequest="200" HorizontalOptions="Center" VerticalOptions="Center">
+                                    <Ellipse.Fill>
+                                        <RadialGradientBrush Center="0.5,0.5" Radius="0.5">
+                                            <GradientStop Color="#55DEFF9A" Offset="0.70"/>
+                                            <GradientStop Color="#00DEFF9A" Offset="1.0"/>
+                                        </RadialGradientBrush>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+
+                                <Ellipse WidthRequest="180" HeightRequest="180" Fill="Transparent" Stroke="#1A2E10" StrokeThickness="1" Opacity="0.6" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                <Ellipse WidthRequest="160" HeightRequest="160" Fill="Transparent" Stroke="#253D16" StrokeThickness="1.5" Opacity="0.5" HorizontalOptions="Center" VerticalOptions="Center"/>
+
+                                <Border x:Name="BtnUnlock" StrokeShape="RoundRectangle 70" Stroke="Transparent" BackgroundColor="#DEFF9A"
+                                        HeightRequest="140" WidthRequest="140" HorizontalOptions="Center" VerticalOptions="Center">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnUnlockTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <Grid>
+                                        <Image x:Name="UnlockIcon" Source="icon_unlock_dark.png" WidthRequest="52" HeightRequest="52"
+                                               HorizontalOptions="Center" VerticalOptions="Center"/>
+                                        <ActivityIndicator x:Name="UnlockSpinner" IsRunning="False" IsVisible="False" Color="#121212"
+                                                           HorizontalOptions="Center" VerticalOptions="Center"/>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <Label x:Name="LblUnlock" Text="UNLOCK" FontSize="17" FontAttributes="Bold" TextColor="#DEFF9A"
+                                   CharacterSpacing="5" HorizontalOptions="Center"/>
+                            <Label Text="Press to open the door" FontSize="12" TextColor="#666666" HorizontalOptions="Center"/>
+
+                            <Button x:Name="BtnPresence" Text="I'm leaving" Clicked="OnPresenceToggle"
+                                    BackgroundColor="Transparent" TextColor="#AAAAAA" BorderColor="#2A2A2A" BorderWidth="1"
+                                    FontSize="13" CornerRadius="10" HeightRequest="42" Padding="20,0" Margin="0,10,0,0"
+                                    HorizontalOptions="Center" IsVisible="False"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+        <!-- NOTIFICATIONS OVERLAY -->
+        <Grid x:Name="NotifOverlay" IsVisible="False">
+            <BoxView BackgroundColor="#CC000000">
+                <BoxView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnCloseNotif"/>
+                </BoxView.GestureRecognizers>
+            </BoxView>
+
+            <Border StrokeShape="RoundRectangle 20" Stroke="#2A2A2A" BackgroundColor="#1A1A1A"
+                    Padding="20,18" Margin="20" MaximumWidthRequest="440" MaximumHeightRequest="520"
+                    HorizontalOptions="Center" VerticalOptions="Center" StrokeThickness="1">
+                <Border.Shadow>
+                    <Shadow Brush="#000000" Offset="0,8" Radius="24" Opacity="0.7"/>
+                </Border.Shadow>
+
+                <Grid RowDefinitions="Auto,Auto,*">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <Label Grid.Column="0" Text="Notifications" TextColor="White" FontSize="15" FontAttributes="Bold" VerticalOptions="Center"/>
+                        <Button Grid.Column="1" Text="Mark all read" Clicked="OnMarkAllRead"
+                                BackgroundColor="Transparent" TextColor="#888888" FontSize="10" Padding="6,0" HeightRequest="30"/>
+                        <Button Grid.Column="2" Text="Clear" Clicked="OnClearNotif"
+                                BackgroundColor="#2A1010" TextColor="#FF7777" FontSize="10" Padding="8,0" HeightRequest="30" CornerRadius="8"/>
+                    </Grid>
+
+                    <BoxView Grid.Row="1" HeightRequest="1" Color="#2A2A2A" Margin="0,10"/>
+
+                    <ScrollView Grid.Row="2">
+                        <VerticalStackLayout x:Name="NotifContainer" MinimumWidthRequest="300">
+                            <BindableLayout.EmptyView>
+                                <Label Text="No notifications" TextColor="#555555" FontSize="13" HorizontalOptions="Center" Margin="0,24"/>
+                            </BindableLayout.EmptyView>
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:NotificationItem">
+                                    <Border StrokeShape="RoundRectangle 10" Stroke="#2A2A2A" BackgroundColor="#141414" Padding="12,10" Margin="0,0,0,8" StrokeThickness="1">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                            <Ellipse Grid.Column="0" WidthRequest="8" HeightRequest="8" Fill="{Binding DotBrush}" VerticalOptions="Start" Margin="0,5,0,0"/>
+                                            <VerticalStackLayout Grid.Column="1" Spacing="3">
+                                                <Label Text="{Binding Message}" TextColor="{Binding MessageColor}" FontSize="13"/>
+                                                <Label Text="{Binding TimeAgo}" TextColor="#555555" FontSize="10"/>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </Grid>
+            </Border>
+        </Grid>
+
+    </Grid>
+</ContentPage>

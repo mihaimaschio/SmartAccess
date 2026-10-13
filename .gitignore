@@ -1,0 +1,18 @@
+# Doar proiectul: tot restul (documentație, conferințe, video, prezentări) e ignorat
+/*
+!/.gitignore
+!/README.md
+!/SmartAccess/
+!/ESP8266/
+!/ESP32-CAM/
+
+# Secrete
+.env
+secrets.h
+
+# Build / dependențe
+node_modules/
+bin/
+obj/
+.vs/
+*.user

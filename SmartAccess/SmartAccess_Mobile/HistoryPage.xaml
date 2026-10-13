@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:SmartAccess.Models"
+             x:Class="SmartAccess.HistoryPage"
+             BackgroundColor="#121212"
+             Title="History">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="20,16,20,12">
+
+        <!-- Antet -->
+        <VerticalStackLayout Grid.Row="0" Spacing="2" Margin="2,8,0,0">
+            <Label Text="Access History" TextColor="#DEFF9A" FontSize="22" FontAttributes="Bold"/>
+            <Label Text="All access events" TextColor="#666666" FontSize="12"/>
+        </VerticalStackLayout>
+
+        <!-- Butoane de filtrare -->
+        <HorizontalStackLayout Grid.Row="1" Spacing="8" Margin="0,16,0,12">
+            <Button x:Name="FilterAll" Text="All" Clicked="OnFilterAll"
+                    BackgroundColor="#DEFF9A" TextColor="#121212" FontSize="12" FontAttributes="Bold"
+                    CornerRadius="16" HeightRequest="34" Padding="16,0"/>
+            <Button x:Name="FilterGranted" Text="Granted" Clicked="OnFilterGranted"
+                    BackgroundColor="#1A1A1A" TextColor="#888888" FontSize="12"
+                    CornerRadius="16" HeightRequest="34" Padding="16,0"/>
+            <Button x:Name="FilterDenied" Text="Denied" Clicked="OnFilterDenied"
+                    BackgroundColor="#1A1A1A" TextColor="#888888" FontSize="12"
+                    CornerRadius="16" HeightRequest="34" Padding="16,0"/>
+        </HorizontalStackLayout>
+
+        <!-- Lista -->
+        <RefreshView Grid.Row="2" x:Name="Refresher" Refreshing="OnRefreshing">
+            <CollectionView x:Name="HistoryList" SelectionMode="None"
+                            RemainingItemsThreshold="3" RemainingItemsThresholdReached="OnLoadMore">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="10" Padding="30">
+                        <Image Source="icon_list.png" WidthRequest="40" HeightRequest="40" HorizontalOptions="Center" Opacity="0.35"/>
+                        <Label x:Name="EmptyLabel" Text="No records" TextColor="#555555" FontSize="14" HorizontalOptions="Center"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:AccessLog">
+                        <Border StrokeShape="RoundRectangle 12" Stroke="#252525" BackgroundColor="#1A1A1A"
+                                Padding="14,12" Margin="0,0,0,8" StrokeThickness="1">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Ellipse Grid.Column="0" WidthRequest="10" HeightRequest="10" Fill="{Binding ResultBrush}" VerticalOptions="Center"/>
+                                <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                    <Label Text="{Binding DisplayName}" TextColor="White" FontSize="14" FontAttributes="Bold"/>
+                                    <Label Text="{Binding DetailLine}" TextColor="#777777" FontSize="11" LineBreakMode="TailTruncation"/>
+                                    <Label Text="{Binding TypeLabel}" TextColor="#555555" FontSize="10"/>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center" HorizontalOptions="End">
+                                    <Border StrokeShape="RoundRectangle 6" Stroke="Transparent" BackgroundColor="{Binding ResultBg}" Padding="8,3" HorizontalOptions="End">
+                                        <Label Text="{Binding ResultLabel}" TextColor="{Binding ResultColor}" FontSize="10" FontAttributes="Bold"/>
+                                    </Border>
+                                    <Label Text="{Binding TimeAgo}" TextColor="#555555" FontSize="10" HorizontalOptions="End"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.Footer>
+                    <ActivityIndicator x:Name="LoadMoreSpinner" IsRunning="False" IsVisible="False" Color="#DEFF9A" Margin="0,10"/>
+                </CollectionView.Footer>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

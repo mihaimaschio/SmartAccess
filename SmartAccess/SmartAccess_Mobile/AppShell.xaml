@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="SmartAccess.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:SmartAccess"
+    Shell.FlyoutBehavior="Flyout"
+    Shell.BackgroundColor="#121212"
+    Shell.TitleColor="#DEFF9A"
+    Shell.ForegroundColor="#DEFF9A"
+    FlyoutBackgroundColor="#141414"
+    Shell.FlyoutWidth="300">
+
+    <!-- Antetul meniului -->
+    <Shell.FlyoutHeader>
+        <Grid BackgroundColor="#141414" Padding="28,40,28,24" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+
+            <Border Grid.Row="0"
+                    StrokeShape="RoundRectangle 18"
+                    Stroke="#2A3A1E"
+                    BackgroundColor="#1A2610"
+                    HeightRequest="60" WidthRequest="60"
+                    HorizontalOptions="Start"
+                    Margin="0,0,0,16">
+                <Image Source="icon_lock_accent.png" WidthRequest="28" HeightRequest="28" HorizontalOptions="Center" VerticalOptions="Center"/>
+            </Border>
+
+            <Label Grid.Row="1" Text="SMART ACCESS" TextColor="#DEFF9A" FontSize="24" FontAttributes="Bold" CharacterSpacing="3"/>
+
+            <Label Grid.Row="2" x:Name="HeaderUser" Text="" TextColor="#6B6B6B" FontSize="13" Margin="0,4,0,20" CharacterSpacing="1"/>
+
+            <BoxView Grid.Row="3" HeightRequest="1" Color="#2A2A2A" HorizontalOptions="Fill"/>
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <!-- Sablonul elementelor de meniu -->
+    <Shell.ItemTemplate>
+        <DataTemplate x:DataType="BaseShellItem">
+            <Grid ColumnDefinitions="Auto,*" Padding="28,16" ColumnSpacing="16" BackgroundColor="#141414">
+                <Image Grid.Column="0" Source="{Binding FlyoutIcon}" WidthRequest="20" HeightRequest="20" VerticalOptions="Center"/>
+                <Label Grid.Column="1" Text="{Binding Title}" TextColor="#CCCCCC" FontSize="15" VerticalOptions="Center" CharacterSpacing="0.5"/>
+            </Grid>
+        </DataTemplate>
+    </Shell.ItemTemplate>
+
+    <!-- Elementele de meniu -->
+    <FlyoutItem Title="Home" FlyoutIcon="icon_home.png">
+        <ShellContent ContentTemplate="{DataTemplate local:DashboardPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Members" FlyoutIcon="icon_users.png">
+        <ShellContent ContentTemplate="{DataTemplate local:FamilyPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="History" FlyoutIcon="icon_list.png">
+        <ShellContent ContentTemplate="{DataTemplate local:HistoryPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Monitoring" FlyoutIcon="icon_camera.png">
+        <ShellContent ContentTemplate="{DataTemplate local:CameraPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem x:Name="AdminItem" Title="Admin" FlyoutIcon="icon_settings.png">
+        <ShellContent ContentTemplate="{DataTemplate local:AdminPage}" />
+    </FlyoutItem>
+
+    <!-- Subsolul meniului -->
+    <Shell.FlyoutFooter>
+        <Grid BackgroundColor="#141414" Padding="20,12,20,28" RowDefinitions="Auto,Auto" RowSpacing="12">
+            <Button Grid.Row="0" Text="Sign Out" Clicked="OnLogoutClicked"
+                    BackgroundColor="#1A1A1A" TextColor="#FF7777" FontSize="13" FontAttributes="Bold"
+                    CornerRadius="10" HeightRequest="44"/>
+            <Label Grid.Row="1" Text="v2.0  •  Secure IoT" TextColor="#3A3A3A" FontSize="11" HorizontalOptions="Center" CharacterSpacing="1"/>
+        </Grid>
+    </Shell.FlyoutFooter>
+
+</Shell>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartAccess — Monitoring</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h2>Video Monitoring</h2>
+          <p class="header-subtitle">Live stream from ESP32-CAM at the door</p>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden; border-radius:var(--radius-xl); background:#000;">
+        <div id="camera-container" style="position:relative; width:100%; aspect-ratio:16/9; display:flex; align-items:center; justify-content:center;">
+          <div id="camera-loading" style="text-align:center;">
+            <div class="spinner" style="margin:0 auto 16px;"></div>
+            <p style="color:var(--text-muted); font-size:13px;">Connecting to camera...</p>
+          </div>
+          <img id="camera-stream" style="width:100%; height:100%; object-fit:contain; display:none;" alt="Live camera stream" />
+          <div id="camera-error" style="display:none; text-align:center;">
+            <h3 style="color:var(--danger); margin-bottom:8px;">Connection error</h3>
+            <p style="color:var(--text-muted); font-size:13px; max-width:300px; margin:0 auto;">
+              Cannot connect to ESP32-CAM. Check that the URL is correct in <b>Admin → Settings</b> and that the camera is powered on.
+            </p>
+          </div>
+        </div>
+        <div style="padding:16px 24px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="status-dot online" id="stream-status-dot" style="display:none;"></span>
+            <span style="font-size:13px; font-weight:600; color:var(--text-muted);" id="stream-status-text">Looking up IP...</span>
+          </div>
+          <button class="btn btn-secondary" onclick="loadCamera()">Reload</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    if (!requireAuth()) throw 'Not logged in';
+    initSidebar('camera');
+
+    let pollInterval = null;
+
+    function stopPolling() {
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      // active e setat per-sesiune in loadCamera, resetat la reload
+    }
+
+    async function loadCamera() {
+      stopPolling();
+      const loading = document.getElementById('camera-loading');
+      const stream  = document.getElementById('camera-stream');
+      const err     = document.getElementById('camera-error');
+      const dot     = document.getElementById('stream-status-dot');
+      const txt     = document.getElementById('stream-status-text');
+
+      loading.style.display = 'block';
+      stream.style.display  = 'none';
+      err.style.display     = 'none';
+      dot.style.display     = 'none';
+      txt.textContent = 'Fetching camera URL...';
+
+      try {
+        const data = await api.get('/settings');
+        const streamUrl = data.settings.camera_url;
+        if (!streamUrl) throw new Error('Camera URL is not set. Configure CAMERA_URL in the server .env file.');
+
+        // Derivam capture URL din stream URL (inlocuim /stream cu /capture)
+        const captureUrl = streamUrl.replace('/stream', '/capture');
+        txt.textContent = 'Connecting...';
+
+        let failCount = 0;
+        let active = true;
+
+        function fetchFrame() {
+          if (!active) return;
+          const img = new Image();
+          img.onload = () => {
+            failCount = 0;
+            stream.src = img.src;
+            if (stream.style.display === 'none') {
+              loading.style.display = 'none';
+              stream.style.display  = 'block';
+              dot.style.display     = 'block';
+              dot.className = 'status-dot online';
+              txt.textContent = 'LIVE';
+              txt.style.color = 'var(--success)';
+            }
+            // Cere imediat urmatorul cadru dupa ce l-a primit pe acesta
+            fetchFrame();
+          };
+          img.onerror = () => {
+            failCount++;
+            if (failCount >= 3) {
+              active = false;
+              loading.style.display = 'none';
+              stream.style.display  = 'none';
+              err.style.display     = 'block';
+              dot.style.display     = 'block';
+              dot.className = 'status-dot offline';
+              txt.textContent = 'OFFLINE';
+              txt.style.color = 'var(--danger)';
+            } else {
+              // Retry dupa 500ms la erori izolate
+              setTimeout(fetchFrame, 500);
+            }
+          };
+          img.src = `${captureUrl}?t=${Date.now()}`;
+        }
+
+        fetchFrame();
+
+      } catch (e) {
+        loading.style.display = 'none';
+        err.style.display = 'block';
+        err.innerHTML = `<h3 style="color:var(--warning); margin-bottom:8px;">Camera not configured</h3><p style="color:var(--text-muted); font-size:13px; max-width:300px; margin:0 auto;">${e.message}</p>`;
+        txt.textContent = 'NOT CONFIGURED';
+      }
+    }
+
+    loadCamera();
+  </script>
+</body>
+</html>

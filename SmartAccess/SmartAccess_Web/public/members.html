@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartAccess — Members</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h2>Members</h2>
+          <p class="header-subtitle" id="page-subtitle">Household access management</p>
+        </div>
+      </div>
+
+      <div id="members-list">
+        <div class="empty-state">
+          <div class="spinner" style="margin:0 auto;"></div>
+          <p style="margin-top:12px;">Loading...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    if (!requireAuth()) throw 'Not logged in';
+    initSidebar('members');
+
+    function formatSince(dateStr) {
+      const diff = new Date() - new Date(dateStr);
+      if (diff < 60000) return '';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)} min`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
+      const days = Math.floor(diff / 86400000);
+      return days === 1 ? '1 day' : `${days} days`;
+    }
+
+    async function loadMembers() {
+      try {
+        const data = await api.get('/members');
+        const container = document.getElementById('members-list');
+
+        if (data.members.length === 0) {
+          container.innerHTML = '<div class="empty-state"><h3>No members registered</h3><p>Invite members via the Admin panel</p></div>';
+          return;
+        }
+
+        container.innerHTML = data.members.map(m => {
+          const homeColor = m.is_home ? 'var(--success)' : 'var(--text-dim)';
+          const since = m.last_seen_at ? formatSince(m.last_seen_at) : '';
+          const homeStatus = (m.is_home ? 'Home' : 'Away') + (since ? ' for ' + since : '');
+          return `
+          <div class="member-card">
+            <div class="member-avatar" style="position:relative;">
+              ${m.full_name.charAt(0).toUpperCase()}
+              <span style="position:absolute; bottom:0; right:0; width:10px; height:10px; border-radius:50%; background:${homeColor}; border:2px solid var(--bg-card);"></span>
+            </div>
+            <div class="member-info">
+              <div class="member-name">${m.full_name}</div>
+              <div style="display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;">
+                ${isAdmin() ? (m.fingerprint_slot !== null ? '<span class="badge badge-success">Fingerprint enrolled</span>' : '<span class="badge badge-muted">No fingerprint</span>') : ''}
+                ${m.role === 'admin' ? '<span class="badge badge-warning">Admin</span>' : ''}
+              </div>
+            </div>
+            <div style="margin-left:auto; text-align:right; flex-shrink:0;">
+              <div style="font-size:15px; font-weight:700; color:${homeColor};">${homeStatus}</div>
+            </div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    }
+
+    loadMembers();
+  </script>
+</body>
+</html>

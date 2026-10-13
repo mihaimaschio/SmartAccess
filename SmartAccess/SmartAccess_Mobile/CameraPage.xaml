@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SmartAccess.CameraPage"
+             BackgroundColor="#121212"
+             Title="Monitoring">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20,16,20,16">
+
+        <VerticalStackLayout Grid.Row="0" Spacing="2" Margin="2,8,0,14">
+            <Label Text="Video Monitoring" TextColor="#DEFF9A" FontSize="22" FontAttributes="Bold"/>
+            <Label Text="Live stream from ESP32-CAM at the door" TextColor="#666666" FontSize="12"/>
+        </VerticalStackLayout>
+
+        <!-- Fluxul video -->
+        <Border Grid.Row="1" StrokeShape="RoundRectangle 18" Stroke="#252525" BackgroundColor="#000000"
+                Padding="0" StrokeThickness="1">
+            <Grid>
+                <Image x:Name="CamView" Aspect="AspectFit" BackgroundColor="#000000"/>
+
+                <!-- Loading overlay -->
+                <VerticalStackLayout x:Name="LoadingBox" Spacing="14" HorizontalOptions="Center" VerticalOptions="Center">
+                    <ActivityIndicator IsRunning="True" Color="#DEFF9A"/>
+                    <Label x:Name="LoadingText" Text="Connecting to camera..." TextColor="#888888" FontSize="13" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+
+                <!-- Error overlay -->
+                <VerticalStackLayout x:Name="ErrorBox" Spacing="10" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="False" Padding="30">
+                    <Image Source="icon_camera.png" WidthRequest="40" HeightRequest="40" HorizontalOptions="Center" Opacity="0.4"/>
+                    <Label x:Name="ErrorTitle" Text="Camera not configured" TextColor="#FFAA33" FontSize="15" FontAttributes="Bold" HorizontalOptions="Center"/>
+                    <Label x:Name="ErrorMsg" Text="" TextColor="#888888" FontSize="12" HorizontalTextAlignment="Center" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+
+        <!-- Subsol -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,14,0,0">
+            <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
+                <Ellipse x:Name="StreamDot" WidthRequest="9" HeightRequest="9" Fill="#555555" VerticalOptions="Center"/>
+                <Label x:Name="StreamStatus" Text="Looking up IP..." TextColor="#888888" FontSize="13" FontAttributes="Bold" VerticalOptions="Center"/>
+            </HorizontalStackLayout>
+            <Button Grid.Column="1" Text="Reload" Clicked="OnReload"
+                    BackgroundColor="#1A1A1A" TextColor="#DEFF9A" FontSize="13" CornerRadius="10" HeightRequest="40" Padding="18,0"/>
+        </Grid>
+    </Grid>
+</ContentPage>
