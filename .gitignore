@@ -5,6 +5,7 @@
 !/SmartAccess/
 !/ESP8266/
 !/ESP32-CAM/
+!/docs/
 
 # Secrete
 .env
